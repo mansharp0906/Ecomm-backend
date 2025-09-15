@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { ROLES } = require('../config/constants');
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -22,10 +23,15 @@ const userSchema = new mongoose.Schema({
     minlength: 6,
     select: false
   },
+  // role: {
+  //   type: mongoose.Schema.Types.ObjectId,
+  //   ref: 'Role',
+  //   required: true
+  // },
   role: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Role',
-    required: true
+    type: String,
+    enum: Object.values(ROLES),
+    default: ROLES.CUSTOMER
   },
   phone: {
     type: String,
