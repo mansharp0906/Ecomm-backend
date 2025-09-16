@@ -1,26 +1,24 @@
+
 const express = require('express');
-const {
-  createBrand,
-  getBrands,
-  getBrand,
-  updateBrand,
-  deleteBrand,
-  toggleBrandStatus
-} = require('../controllers/brandController');
-const { auth, requireRole, requirePermission } = require('../middleware/auth');
-const { handleValidationErrors } = require('../middleware/validation');
-const { createBrandValidation, updateBrandValidation } = require('../validations/brandValidation');
-
 const router = express.Router();
+const brandController = require('../controllers/brandController');
+const { auth, requireRole } = require('../middleware/auth');
+const { upload } = require('../middleware/upload');
 
-// Public routes
-router.get('/', getBrands);
-router.get('/:id', getBrand);
+router.get('/', brandController.getAllBrands);
+router.get('/:id', brandController.getBrand);
+router.get('/slug/:slug', brandController.getBrandBySlug);
+router.get('/:id/products', brandController.getBrandProducts);
 
-// Protected routes
-router.post('/', auth, requirePermission('brand.create'), createBrandValidation, handleValidationErrors, createBrand);
-router.put('/:id', auth, requirePermission('brand.update'), updateBrandValidation, handleValidationErrors, updateBrand);
-router.delete('/:id', auth, requirePermission('brand.delete'), deleteBrand);
-router.patch('/:id/status', auth, requirePermission('brand.update'), toggleBrandStatus);
+// Admin routes
+router.post('/', auth,  requireRole(['admin']), upload.fields([
+  { name: 'logo', maxCount: 1 },
+  { name: 'banner', maxCount: 1 }
+]), brandController.createBrand);
+router.put('/:id', auth,  requireRole(['admin']), upload.fields([
+  { name: 'logo', maxCount: 1 },
+  { name: 'banner', maxCount: 1 }
+]), brandController.updateBrand);
+router.delete('/:id', auth,  requireRole(['admin']), brandController.deleteBrand);
 
 module.exports = router;

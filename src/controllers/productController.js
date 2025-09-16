@@ -1,436 +1,333 @@
-const { validationResult } = require('express-validator');
-const Product = require('../models/Product');
 
-// Create a new product
-exports.createProduct = async (req, res) => {
+const { default: slugify } = require('slugify');
+const productService = require('../services/productService');
+const { uploadToCloudinary, uploadMultipleToCloudinary } = require('../utils/cloudinaryUpload');
+const { validateProduct } = require('../validations/productValidation');
+
+// const createProduct = async (req, res) => {
+//   try {
+//     console.log(req.body, "body in products");
+
+//     // ✅ Validation
+//     const { error } = validateProduct(req.body);
+//     if (error) {
+//       return res.status(400).json({ error: error.details[0].message });
+//     }
+
+//     let thumbnailUrl = null;
+//     let imageUrls = [];
+//     let pdfUrl = null;
+    
+//     // ✅ Upload files if available
+//     if (req.files?.thumbnail?.[0]) {
+//       thumbnailUrl = await uploadToCloudinary(req.files.thumbnail[0], "products/thumbnail");
+//     }
+
+//     if (req.files?.images?.length) {
+//       imageUrls = await uploadMultipleToCloudinary(req.files.images, "products/images");
+//     }
+
+//     if (req.files?.pdf?.[0]) {
+//       pdfUrl = await uploadToCloudinary(req.files.pdf[0], "products/pdf");
+//     }
+
+//     // ✅ Start preparing product data
+//     const productData = {
+//       ...req.body,
+//       thumbnail: thumbnailUrl,
+//       images: imageUrls,
+//       pdf: pdfUrl,
+//     };
+
+//     // ✅ Safe JSON parsing (in case values are sent as strings)
+//     const parseIfString = (field) => {
+//       if (typeof req.body[field] === "string") {
+//         try {
+//           return JSON.parse(req.body[field]);
+//         } catch (err) {
+//           console.warn(`Invalid JSON for field: ${field}`);
+//           return req.body[field]; // fallback to raw value
+//         }
+//       }
+//       return req.body[field];
+//     };
+
+//     productData.variants = parseIfString("variants");
+//     productData.attributes = parseIfString("attributes");
+//     productData.dimensions = parseIfString("dimensions");
+//     productData.storeVisibility = parseIfString("storeVisibility");
+
+//     // ✅ Save product
+//     const product = await productService.createProduct(productData);
+//     return res.status(201).json(product);
+//   } catch (error) {
+//     console.error("Error creating product:", error);
+//     return res.status(400).json({ error: error.message });
+//   }
+// };
+
+
+
+const createProduct = async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: errors.array()
-      });
+    console.log(req.body, "body in products");
+
+    let thumbnailUrl = null;
+    let imageUrls = [];
+    let pdfUrl = null;
+
+    // ✅ Upload files if available
+    if (req.files?.thumbnail?.[0]) {
+      thumbnailUrl = await uploadToCloudinary(
+        req.files.thumbnail[0],
+        "products/thumbnail"
+      );
     }
 
+    if (req.files?.images?.length) {
+      imageUrls = await uploadMultipleToCloudinary(
+        req.files.images,
+        "products/images"
+      );
+    }
+
+    if (req.files?.pdf?.[0]) {
+      pdfUrl = await uploadToCloudinary(
+        req.files.pdf[0],
+        "products/pdf"
+      );
+    }
+
+    // ✅ Generate slug from title
+    const slug = slugify(req.body.title, { lower: true, strict: true });
+
+    // ✅ Prepare product data
     const productData = {
       ...req.body,
-      createdBy: req.user._id
+      slug,
+      thumbnail: thumbnailUrl,
+      images: imageUrls,
+      pdf: pdfUrl,
     };
 
-    const product = new Product(productData);
-    await product.save();
-    
-    // Populate references
-    await product.populate([
-      { path: 'brand', select: 'name logo' },
-      { path: 'category', select: 'name' },
-      { path: 'subCategory', select: 'name' }
-    ]);
-    
-    res.status(201).json({
-      success: true,
-      message: 'Product created successfully',
-      data: { product }
-    });
-  } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({
-        success: false,
-        message: 'Product with this SKU or barcode already exists'
-      });
-    }
-    
-    res.status(500).json({
-      success: false,
-      message: 'Server error',
-      error: error.message
-    });
-  }
-};
-
-// Get all products with filtering and pagination
-exports.getProducts = async (req, res) => {
-  try {
-    const { 
-      page = 1, 
-      limit = 50, 
-      search, 
-      status,
-      featured,
-      type,
-      brand,
-      category,
-      subCategory,
-      minPrice,
-      maxPrice,
-      lowStock
-    } = req.query;
-    
-    let query = {};
-    
-    if (status) {
-      query.status = status;
-    }
-    
-    if (featured !== undefined) {
-      query.featured = featured === 'true';
-    }
-    
-    if (type) {
-      query.type = type;
-    }
-    
-    if (brand) {
-      query.brand = brand;
-    }
-    
-    if (category) {
-      query.category = category;
-    }
-    
-    if (subCategory) {
-      query.subCategory = subCategory;
-    }
-    
-    if (search) {
-      query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { sku: { $regex: search, $options: 'i' } },
-        { barcode: { $regex: search, $options: 'i' } },
-        { tags: { $in: [new RegExp(search, 'i')] } }
-      ];
-    }
-    
-    if (minPrice || maxPrice) {
-      query['variants.price'] = {};
-      if (minPrice) query['variants.price'].$gte = parseFloat(minPrice);
-      if (maxPrice) query['variants.price'].$lte = parseFloat(maxPrice);
-    }
-    
-    if (lowStock === 'true') {
-      query.$expr = { $lte: [{ $sum: '$variants.stock' }, 5] };
-    }
-    
-    const products = await Product.find(query)
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .populate('brand', 'name logo')
-      .populate('category', 'name')
-      .populate('subCategory', 'name');
-    
-    const total = await Product.countDocuments(query);
-    
-    res.json({
-      success: true,
-      data: {
-        products,
-        pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
-          total,
-          pages: Math.ceil(total / limit)
+    // ✅ Safe JSON parsing helper
+    const parseIfString = (field) => {
+      if (typeof req.body[field] === "string") {
+        try {
+          return JSON.parse(req.body[field]);
+        } catch (err) {
+          console.warn(`Invalid JSON for field: ${field}`);
+          return req.body[field];
         }
       }
-    });
+      return req.body[field];
+    };
+
+    productData.variants = parseIfString("variants");
+    productData.attributes = parseIfString("attributes");
+    productData.dimensions = parseIfString("dimensions");
+    productData.storeVisibility = parseIfString("storeVisibility");
+
+    // ✅ Normalize numeric and array fields
+    if (req.body.weight) {
+      productData.weight = Array.isArray(req.body.weight)
+        ? req.body.weight.map(Number)
+        : Number(req.body.weight);
+    }
+
+    if (req.body.stock) {
+      productData.stock = Array.isArray(req.body.stock)
+        ? req.body.stock.map(Number)
+        : Number(req.body.stock);
+    }
+
+    if (req.body.tags) {
+      productData.tags = Array.isArray(req.body.tags)
+        ? req.body.tags
+        : [req.body.tags];
+    }
+
+    if (req.body.sku) {
+      productData.sku = Array.isArray(req.body.sku)
+        ? req.body.sku
+        : req.body.sku.toString();
+    }
+
+    // ✅ Trim ObjectId fields to avoid Mongo Cast errors
+    if (req.body.category) productData.category = req.body.category.trim();
+    if (req.body.subCategory) productData.subCategory = req.body.subCategory.trim();
+    if (req.body.brand) productData.brand = req.body.brand.trim();
+
+    // ✅ Validate product
+    const { error } = validateProduct(productData);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
+
+    // ✅ Save product
+    const product = await productService.createProduct(productData);
+    return res.status(201).json(product);
+
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server error',
-      error: error.message
-    });
+    console.error("Error creating product:", error);
+    return res.status(400).json({ error: error.message });
   }
 };
 
-// Get single product
-exports.getProduct = async (req, res) => {
+
+const getProduct = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id)
-      .populate('brand', 'name logo')
-      .populate('category', 'name')
-      .populate('subCategory', 'name')
-      .populate('attributes.attribute', 'name values')
-      .populate('variants.attributes.attribute', 'name values');
+    const { id } = req.params;
+    const product = await productService.getProductById(id);
     
     if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
+      return res.status(404).json({ error: 'Product not found' });
     }
     
-    res.json({
-      success: true,
-      data: { product }
-    });
+    res.json(product);
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server error',
-      error: error.message
-    });
+    res.status(400).json({ error: error.message });
   }
 };
 
-// Update product
-exports.updateProduct = async (req, res) => {
+const getProductBySlug = async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: errors.array()
-      });
-    }
-
-    const product = await Product.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    )
-    .populate('brand', 'name logo')
-    .populate('category', 'name')
-    .populate('subCategory', 'name');
+    const { slug } = req.params;
+    const product = await productService.getProductBySlug(slug);
     
     if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
+      return res.status(404).json({ error: 'Product not found' });
     }
     
-    res.json({
-      success: true,
-      message: 'Product updated successfully',
-      data: { product }
-    });
+    res.json(product);
   } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({
-        success: false,
-        message: 'Product with this SKU or barcode already exists'
-      });
-    }
-    
-    res.status(500).json({
-      success: false,
-      message: 'Server error',
-      error: error.message
-    });
+    res.status(400).json({ error: error.message });
   }
 };
 
-// Delete product
-exports.deleteProduct = async (req, res) => {
+const getAllProducts = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const filters = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const sort = req.query.sort ? JSON.parse(req.query.sort) : {};
+    
+    const result = await productService.getAllProducts(filters, page, limit, sort);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+const updateProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { error } = validateProduct(req.body, true);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
+    
+    let updateData = { ...req.body };
+    
+    if (req.files?.thumbnail) {
+      const thumbnailUrl = await uploadToCloudinary(req.files.thumbnail[0], 'products/thumbnail');
+      updateData.thumbnail = thumbnailUrl;
+    }
+    
+    if (req.files?.images) {
+      const imageUrls = await uploadMultipleToCloudinary(req.files.images, 'products/images');
+      updateData.images = imageUrls;
+    }
+    
+    if (req.files?.pdf) {
+      const pdfUrl = await uploadToCloudinary(req.files.pdf[0], 'products/pdf');
+      updateData.pdf = pdfUrl;
+    }
+    
+    // Parse JSON fields if they are sent as strings
+    if (typeof req.body.variants === 'string') {
+      updateData.variants = JSON.parse(req.body.variants);
+    }
+    
+    if (typeof req.body.attributes === 'string') {
+      updateData.attributes = JSON.parse(req.body.attributes);
+    }
+    
+    if (typeof req.body.dimensions === 'string') {
+      updateData.dimensions = JSON.parse(req.body.dimensions);
+    }
+    
+    if (typeof req.body.storeVisibility === 'string') {
+      updateData.storeVisibility = JSON.parse(req.body.storeVisibility);
+    }
+    
+    const product = await productService.updateProduct(id, updateData);
     
     if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
+      return res.status(404).json({ error: 'Product not found' });
     }
     
-    // Check if product has orders
-    const Order = require('../models/Order');
-    const orderCount = await Order.countDocuments({
-      'items.product': req.params.id
-    });
-    
-    if (orderCount > 0) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Cannot delete product that has orders. Please archive it instead.' 
-      });
-    }
-    
-    await Product.findByIdAndDelete(req.params.id);
-    
-    res.json({
-      success: true,
-      message: 'Product deleted successfully'
-    });
+    res.json(product);
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server error',
-      error: error.message
-    });
+    res.status(400).json({ error: error.message });
   }
 };
 
-// Toggle product status
-exports.toggleProductStatus = async (req, res) => {
+const deleteProduct = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const { id } = req.params;
+    const product = await productService.deleteProduct(id);
     
     if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
+      return res.status(404).json({ error: 'Product not found' });
     }
     
-    product.status = product.status === 'active' ? 'inactive' : 'active';
-    await product.save();
-    
-    res.json({
-      success: true,
-      message: `Product ${product.status === 'active' ? 'activated' : 'deactivated'} successfully`,
-      data: { product }
-    });
+    res.json({ message: 'Product deleted successfully' });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server error',
-      error: error.message
-    });
+    res.status(400).json({ error: error.message });
   }
 };
 
-// Toggle featured status
-exports.toggleFeaturedStatus = async (req, res) => {
+const getFeaturedProducts = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const limit = parseInt(req.query.limit) || 10;
+    const products = await productService.getFeaturedProducts(limit);
+    res.json(products);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+const getRelatedProducts = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const limit = parseInt(req.query.limit) || 5;
     
+    // First get the product to find its category
+    const product = await productService.getProductById(id);
     if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
+      return res.status(404).json({ error: 'Product not found' });
     }
     
-    product.featured = !product.featured;
-    await product.save();
-    
-    res.json({
-      success: true,
-      message: `Product ${product.featured ? 'added to' : 'removed from'} featured section successfully`,
-      data: { product }
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server error',
-      error: error.message
-    });
-  }
-};
-
-// Update product stock
-exports.updateProductStock = async (req, res) => {
-  try {
-    const { variantId, stock } = req.body;
-    
-    const product = await Product.findById(req.params.id);
-    
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
-    }
-    
-    if (variantId) {
-      // Update specific variant stock
-      const variant = product.variants.id(variantId);
-      if (!variant) {
-        return res.status(404).json({
-          success: false,
-          message: 'Variant not found'
-        });
-      }
-      variant.stock = stock;
-    } else {
-      // Update all variants stock (for simple products)
-      product.variants.forEach(variant => {
-        variant.stock = stock;
-      });
-    }
-    
-    await product.save();
-    
-    res.json({
-      success: true,
-      message: 'Product stock updated successfully',
-      data: { product }
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server error',
-      error: error.message
-    });
-  }
-};
-
-// Bulk update products
-exports.bulkUpdateProducts = async (req, res) => {
-  try {
-    const { ids, updateData } = req.body;
-    
-    if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Product IDs are required'
-      });
-    }
-    
-    const result = await Product.updateMany(
-      { _id: { $in: ids } },
-      updateData
+    const relatedProducts = await productService.getRelatedProducts(
+      id, 
+      product.category, 
+      limit
     );
     
-    res.json({
-      success: true,
-      message: `${result.modifiedCount} products updated successfully`,
-      data: { modifiedCount: result.modifiedCount }
-    });
+    res.json(relatedProducts);
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server error',
-      error: error.message
-    });
+    res.status(400).json({ error: error.message });
   }
 };
 
-// Export products
-exports.exportProducts = async (req, res) => {
-  try {
-    const { format = 'json' } = req.query;
-    
-    const products = await Product.find()
-      .populate('brand', 'name')
-      .populate('category', 'name')
-      .populate('subCategory', 'name');
-    
-    if (format === 'csv') {
-      // Convert to CSV format
-      const { Parser } = require('json2csv');
-      const fields = ['title', 'sku', 'barcode', 'brand.name', 'category.name', 'type', 'status', 'price', 'stock'];
-      const parser = new Parser({ fields });
-      const csv = parser.parse(products);
-      
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', 'attachment; filename=products.csv');
-      return res.send(csv);
-    }
-    
-    // Default to JSON
-    res.json({
-      success: true,
-      data: { products }
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server error',
-      error: error.message
-    });
-  }
+module.exports = {
+  createProduct,
+  getProduct,
+  getProductBySlug,
+  getAllProducts,
+  updateProduct,
+  deleteProduct,
+  getFeaturedProducts,
+  getRelatedProducts
 };

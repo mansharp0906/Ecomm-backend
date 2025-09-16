@@ -1,3 +1,4 @@
+
 const mongoose = require('mongoose');
 
 const attributeValueSchema = new mongoose.Schema({
@@ -13,6 +14,10 @@ const attributeValueSchema = new mongoose.Schema({
   image: {
     type: String,
     default: null
+  },
+  isDefault: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -38,11 +43,20 @@ const attributeSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  displayType: {
+    type: String,
+    enum: ['text', 'color', 'image'],
+    default: 'text'
+  },
   status: {
     type: String,
     enum: ['active', 'inactive'],
     default: 'active'
-  }
+  },
+  categories: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category'
+  }]
 }, {
   timestamps: true
 });
@@ -61,5 +75,6 @@ attributeSchema.pre('save', function(next) {
 // Index for better performance
 attributeSchema.index({ slug: 1 });
 attributeSchema.index({ status: 1 });
+attributeSchema.index({ categories: 1 });
 
 module.exports = mongoose.model('Attribute', attributeSchema);

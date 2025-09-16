@@ -11,6 +11,7 @@ const categoryRoutes = require('./routes/categories');
 const brandRoutes = require('./routes/brands');
 const attributeRoutes = require('./routes/attributes');
 const productRoutes = require('./routes/products');
+
 const app = express();
 
 // Security middleware
@@ -40,6 +41,7 @@ app.use('/api/v1/categories', categoryRoutes);
 app.use('/api/v1/brands', brandRoutes);
 app.use('/api/v1/attributes', attributeRoutes);
 app.use('/api/v1/products', productRoutes);
+
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

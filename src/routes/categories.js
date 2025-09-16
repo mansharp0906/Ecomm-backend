@@ -1,26 +1,19 @@
+
 const express = require('express');
-const {
-  createCategory,
-  getCategories,
-  getCategory,
-  updateCategory,
-  deleteCategory,
-  getCategoryTree
-} = require('../controllers/categoryController');
-const { auth, requireRole, requirePermission } = require('../middleware/auth');
-const { handleValidationErrors } = require('../middleware/validation');
-const { createCategoryValidation, updateCategoryValidation } = require('../validations/categoryValidation');
-
 const router = express.Router();
+const categoryController = require('../controllers/categoryController');
+const { auth, requireRole } = require('../middleware/auth');
+const { upload } = require('../middleware/upload');
 
-// Public routes
-router.get('/', getCategories);
-router.get('/tree', getCategoryTree);
-router.get('/:id', getCategory);
+router.get('/', categoryController.getAllCategories);
+router.get('/tree', categoryController.getCategoryTree);
+router.get('/:id', categoryController.getCategory);
+router.get('/slug/:slug', categoryController.getCategoryBySlug);
+router.get('/:id/products', categoryController.getCategoryProducts);
 
-// Protected routes (admin only)
-router.post('/', auth, requireRole(['admin']), createCategoryValidation, handleValidationErrors, createCategory);
-router.put('/:id', auth, requireRole(['admin']), updateCategoryValidation, handleValidationErrors, updateCategory);
-router.delete('/:id', auth, requireRole(['admin']), deleteCategory);
+// Admin routes
+router.post('/', auth, requireRole(['admin']), upload.single('image'), categoryController.createCategory);
+router.put('/:id', auth, requireRole(['admin']), upload.single('image'), categoryController.updateCategory);
+router.delete('/:id', auth, requireRole(['admin']), categoryController.deleteCategory);
 
 module.exports = router;

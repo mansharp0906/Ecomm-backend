@@ -1,189 +1,93 @@
-const { body } = require('express-validator');
+const Joi = require('joi');
 
-const createProductValidation = [
-  body('title')
-    .trim()
-    .notEmpty()
-    .withMessage('Product title is required')
-    .isLength({ min: 2, max: 200 })
-    .withMessage('Product title must be between 2 and 200 characters'),
-  
-  body('description')
-    .optional()
-    .trim()
-    .isLength({ max: 2000 })
-    .withMessage('Description cannot exceed 2000 characters'),
-  
-  body('shortDescription')
-    .optional()
-    .trim()
-    .isLength({ max: 300 })
-    .withMessage('Short description cannot exceed 300 characters'),
-  
-  body('brand')
-    .optional()
-    .isMongoId()
-    .withMessage('Valid brand ID is required'),
-  
-  body('category')
-    .isMongoId()
-    .withMessage('Valid category ID is required'),
-  
-  body('subCategory')
-    .optional()
-    .isMongoId()
-    .withMessage('Valid sub-category ID is required'),
-  
-  body('type')
-    .isIn(['physical', 'digital'])
-    .withMessage('Product type must be either physical or digital'),
-  
-  body('unit')
-    .optional()
-    .trim()
-    .notEmpty()
-    .withMessage('Unit is required'),
-  
-  body('minOrderQty')
-    .optional()
-    .isInt({ min: 1 })
-    .withMessage('Minimum order quantity must be at least 1'),
-  
-  body('tax')
-    .optional()
-    .isFloat({ min: 0, max: 100 })
-    .withMessage('Tax must be between 0 and 100'),
-  
-  body('taxType')
-    .optional()
-    .isIn(['inclusive', 'exclusive'])
-    .withMessage('Tax type must be either inclusive or exclusive'),
-  
-  body('shippingCost')
-    .optional()
-    .isFloat({ min: 0 })
-    .withMessage('Shipping cost cannot be negative'),
-  
-  body('weight')
-    .optional()
-    .isFloat({ min: 0 })
-    .withMessage('Weight cannot be negative'),
-  
-  body('status')
-    .optional()
-    .isIn(['active', 'inactive', 'draft'])
-    .withMessage('Status must be either active, inactive, or draft'),
-  
-  body('featured')
-    .optional()
-    .isBoolean()
-    .withMessage('Featured must be a boolean'),
-  
-  body('tags')
-    .optional()
-    .isArray()
-    .withMessage('Tags must be an array'),
-  
-  body('tags.*')
-    .trim()
-    .notEmpty()
-    .withMessage('Tag cannot be empty')
-];
+const variantSchema = Joi.object({
+  sku: Joi.string().required(),
+  price: Joi.number().min(0).required(),
+  mrp: Joi.number().min(0).required(),
+  weight: Joi.number().min(0).default(0),
+  stock: Joi.number().default(0),
+  images: Joi.array().items(Joi.string()),
+  attributes: Joi.array().items(Joi.object({
+    attribute: Joi.string().required(),
+    value: Joi.string().required()
+  })),
+  status: Joi.string().valid('active', 'inactive').default('active')
+});
 
-const updateProductValidation = [
-  body('title')
-    .optional()
-    .trim()
-    .notEmpty()
-    .withMessage('Product title cannot be empty')
-    .isLength({ min: 2, max: 200 })
-    .withMessage('Product title must be between 2 and 200 characters'),
-  
-  body('description')
-    .optional()
-    .trim()
-    .isLength({ max: 2000 })
-    .withMessage('Description cannot exceed 2000 characters'),
-  
-  body('shortDescription')
-    .optional()
-    .trim()
-    .isLength({ max: 300 })
-    .withMessage('Short description cannot exceed 300 characters'),
-  
-  body('brand')
-    .optional()
-    .isMongoId()
-    .withMessage('Valid brand ID is required'),
-  
-  body('category')
-    .optional()
-    .isMongoId()
-    .withMessage('Valid category ID is required'),
-  
-  body('subCategory')
-    .optional()
-    .isMongoId()
-    .withMessage('Valid sub-category ID is required'),
-  
-  body('type')
-    .optional()
-    .isIn(['physical', 'digital'])
-    .withMessage('Product type must be either physical or digital'),
-  
-  body('unit')
-    .optional()
-    .trim()
-    .notEmpty()
-    .withMessage('Unit is required'),
-  
-  body('minOrderQty')
-    .optional()
-    .isInt({ min: 1 })
-    .withMessage('Minimum order quantity must be at least 1'),
-  
-  body('tax')
-    .optional()
-    .isFloat({ min: 0, max: 100 })
-    .withMessage('Tax must be between 0 and 100'),
-  
-  body('taxType')
-    .optional()
-    .isIn(['inclusive', 'exclusive'])
-    .withMessage('Tax type must be either inclusive or exclusive'),
-  
-  body('shippingCost')
-    .optional()
-    .isFloat({ min: 0 })
-    .withMessage('Shipping cost cannot be negative'),
-  
-  body('weight')
-    .optional()
-    .isFloat({ min: 0 })
-    .withMessage('Weight cannot be negative'),
-  
-  body('status')
-    .optional()
-    .isIn(['active', 'inactive', 'draft'])
-    .withMessage('Status must be either active, inactive, or draft'),
-  
-  body('featured')
-    .optional()
-    .isBoolean()
-    .withMessage('Featured must be a boolean'),
-  
-  body('tags')
-    .optional()
-    .isArray()
-    .withMessage('Tags must be an array'),
-  
-  body('tags.*')
-    .trim()
-    .notEmpty()
-    .withMessage('Tag cannot be empty')
-];
+const productAttributeSchema = Joi.object({
+  attribute: Joi.string().required(),
+  values: Joi.array().items(Joi.string()).min(1)
+});
 
-module.exports = {
-  createProductValidation,
-  updateProductValidation
+const storeVisibilitySchema = Joi.object({
+  store: Joi.string().required(),
+  // stock: Joi.number().default(0),
+  stock: Joi.alternatives().try(
+  Joi.number(),
+  Joi.array().items(Joi.number())
+).default(0),
+
+  threshold: Joi.number().default(5),
+  visible: Joi.boolean().default(true)
+});
+
+const dimensionsSchema = Joi.object({
+  length: Joi.number().min(0),
+  width: Joi.number().min(0),
+  height: Joi.number().min(0)
+});
+
+const validateProduct = (data, isUpdate = false) => {
+  const schema = Joi.object({
+    title: isUpdate ? 
+      Joi.string().trim().max(200) : 
+      Joi.string().trim().max(200).required(),
+    description: Joi.string().trim().allow(''),
+    shortDescription: Joi.string().trim().max(300).allow(''),
+    sku: Joi.string().allow(''),
+    barcode: Joi.string().allow(''),
+    brand: Joi.string().allow(null),
+    category: isUpdate ? 
+      Joi.string() : 
+      Joi.string().required(),
+    subCategory: Joi.string().allow(null),
+    variants: Joi.array().items(variantSchema),
+    attributes: Joi.array().items(productAttributeSchema),
+    images: Joi.array().items(Joi.string()),
+    thumbnail: isUpdate ? 
+      Joi.string() : 
+      Joi.string().required(),
+    type: Joi.string().valid('physical', 'digital').default('physical'),
+    unit: Joi.string().default('pcs'),
+    minOrderQty: Joi.number().min(1).default(1),
+    tax: Joi.number().min(0).default(0),
+    taxType: Joi.string().valid('inclusive', 'exclusive').default('exclusive'),
+    shippingCost: Joi.number().min(0).default(0),
+    // weight: Joi.number().min(0).default(0),
+    weight: Joi.alternatives().try(
+  Joi.number(),
+  Joi.array().items(Joi.number())
+).default(0),
+
+
+tags: Joi.alternatives().try(
+  Joi.string(),
+  Joi.array().items(Joi.string())
+),
+
+    dimensions: dimensionsSchema,
+    storeVisibility: Joi.array().items(storeVisibilitySchema),
+    status: Joi.string().valid('active', 'inactive', 'draft').default('draft'),
+    featured: Joi.boolean().default(false),
+    metaTitle: Joi.string().trim().allow(''),
+    metaDescription: Joi.string().trim().allow(''),
+    pdf: Joi.string().allow(null, ''),
+    // tags: Joi.array().items(Joi.string()),
+    createdBy: Joi.string()
+  });
+
+  // return schema.validate(data);
+   return schema.validate(data, { stripUnknown: true });
 };
+
+module.exports = { validateProduct };

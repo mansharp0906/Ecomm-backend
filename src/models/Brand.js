@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
 
+const mongoose = require('mongoose');
 const brandSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -21,13 +21,21 @@ const brandSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  banner: {
+    type: String,
+    default: null
+  },
   status: {
     type: String,
     enum: ['active', 'inactive'],
     default: 'active'
   },
   metaTitle: String,
-  metaDescription: String
+  metaDescription: String,
+  priority: {
+    type: Number,
+    default: 0
+  }
 }, {
   timestamps: true
 });
@@ -51,19 +59,11 @@ brandSchema.virtual('productCount', {
   count: true
 });
 
-// Virtual for order count (through products)
-brandSchema.virtual('orderCount', {
-  ref: 'Order',
-  localField: '_id',
-  foreignField: 'items.product.brand',
-  count: true
-});
-
 // Include virtuals in JSON output
 brandSchema.set('toJSON', { virtuals: true });
-
 // Index for better performance
 brandSchema.index({ slug: 1 });
 brandSchema.index({ status: 1 });
+brandSchema.index({ priority: 1 });
 
 module.exports = mongoose.model('Brand', brandSchema);

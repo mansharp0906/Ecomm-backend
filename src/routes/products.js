@@ -1,34 +1,27 @@
+
 const express = require('express');
-const {
-  createProduct,
-  getProducts,
-  getProduct,
-  updateProduct,
-  deleteProduct,
-  toggleProductStatus,
-  toggleFeaturedStatus,
-  updateProductStock,
-  bulkUpdateProducts,
-  exportProducts
-} = require('../controllers/productController');
-const { auth, requireRole, requirePermission } = require('../middleware/auth');
-const { handleValidationErrors } = require('../middleware/validation');
-const { createProductValidation, updateProductValidation } = require('../validations/productValidation');
-
 const router = express.Router();
+const productController = require('../controllers/productController');
+const { authenticate, authorize, requireRole, auth } = require('../middleware/auth');
+const { upload } = require('../middleware/upload');
 
-// Public routes
-router.get('/', getProducts);
-router.get('/:id', getProduct);
-router.get('/export/products', exportProducts);
+router.get('/', productController.getAllProducts);
+router.get('/featured', productController.getFeaturedProducts);
+router.get('/:id', productController.getProduct);
+router.get('/slug/:slug', productController.getProductBySlug);
+router.get('/:id/related', productController.getRelatedProducts);
 
-// Protected routes
-router.post('/', auth, requirePermission('product.create'), createProductValidation, handleValidationErrors, createProduct);
-router.put('/:id', auth, requirePermission('product.update'), updateProductValidation, handleValidationErrors, updateProduct);
-router.delete('/:id', auth, requirePermission('product.delete'), deleteProduct);
-router.patch('/:id/status', auth, requirePermission('product.update'), toggleProductStatus);
-router.patch('/:id/featured', auth, requirePermission('product.update'), toggleFeaturedStatus);
-router.patch('/:id/stock', auth, requirePermission('product.update'), updateProductStock);
-router.post('/bulk-update', auth, requirePermission('product.update'), bulkUpdateProducts);
+// Admin routes
+router.post('/', auth, requireRole(['admin']), upload.fields([
+  { name: 'thumbnail', maxCount: 1 },
+  { name: 'images', maxCount: 10 },
+  { name: 'pdf', maxCount: 1 }
+]), productController.createProduct);
+router.put('/:id', auth, requireRole(['admin']), upload.fields([
+  { name: 'thumbnail', maxCount: 1 },
+  { name: 'images', maxCount: 10 },
+  { name: 'pdf', maxCount: 1 }
+]), productController.updateProduct);
+router.delete('/:id', auth,  requireRole(['admin']), productController.deleteProduct);
 
 module.exports = router;

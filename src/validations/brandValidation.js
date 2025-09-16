@@ -1,47 +1,20 @@
-const { body } = require('express-validator');
+const Joi = require('joi');
 
-const createBrandValidation = [
-  body('name')
-    .trim()
-    .notEmpty()
-    .withMessage('Brand name is required')
-    .isLength({ min: 2, max: 100 })
-    .withMessage('Brand name must be between 2 and 100 characters'),
-  
-  body('description')
-    .optional()
-    .trim()
-    .isLength({ max: 500 })
-    .withMessage('Description cannot exceed 500 characters'),
-  
-  body('status')
-    .optional()
-    .isIn(['active', 'inactive'])
-    .withMessage('Status must be either active or inactive')
-];
+const validateBrand = (data, isUpdate = false) => {
+  const schema = Joi.object({
+    name: isUpdate ? 
+      Joi.string().trim().max(100) : 
+      Joi.string().trim().max(100).required(),
+       logo: Joi.string().uri().allow(null),    
+    banner: Joi.string().uri().allow(null),   
+    description: Joi.string().trim().allow(''),
+    status: Joi.string().valid('active', 'inactive').default('active'),
+    priority: Joi.number().default(0),
+    metaTitle: Joi.string().trim().allow(''),
+    metaDescription: Joi.string().trim().allow('')
+  });
 
-const updateBrandValidation = [
-  body('name')
-    .optional()
-    .trim()
-    .notEmpty()
-    .withMessage('Brand name cannot be empty')
-    .isLength({ min: 2, max: 100 })
-    .withMessage('Brand name must be between 2 and 100 characters'),
-  
-  body('description')
-    .optional()
-    .trim()
-    .isLength({ max: 500 })
-    .withMessage('Description cannot exceed 500 characters'),
-  
-  body('status')
-    .optional()
-    .isIn(['active', 'inactive'])
-    .withMessage('Status must be either active or inactive')
-];
-
-module.exports = {
-  createBrandValidation,
-  updateBrandValidation
+  return schema.validate(data);
 };
+
+module.exports = { validateBrand };

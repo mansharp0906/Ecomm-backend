@@ -1,239 +1,153 @@
-const { validationResult } = require('express-validator');
-const Brand = require('../models/Brand');
-const Product = require('../models/Product');
+const { default: slugify } = require('slugify');
+const brandService = require('../services/brandService');
+const { uploadToCloudinary } = require('../utils/cloudinaryUpload');
+const { validateBrand } = require('../validations/brandValidation');
 
-// Create a new brand
-exports.createBrand = async (req, res) => {
+const createBrand = async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: errors.array()
-      });
+    const { error } = validateBrand(req.body);
+    console.log(req.body,"body in brands");
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
     }
-
-    const { name, description, logo, status, metaTitle, metaDescription } = req.body;
     
-    const brand = new Brand({
-      name,
-      description,
-      logo,
-      status: status || 'active',
-      metaTitle,
-      metaDescription
-    });
-
-    await brand.save();
+    let logoUrl = null;
+    let bannerUrl = null;
     
-    res.status(201).json({
-      success: true,
-      message: 'Brand created successfully',
-      data: { brand }
-    });
+    if (req.files?.logo) {
+      logoUrl = await uploadToCloudinary(req.files.logo[0], 'brands/logo');
+    }
+    
+    if (req.files?.banner) {
+      bannerUrl = await uploadToCloudinary(req.files.banner[0], 'brands/banner');
+    }
+     
+    const slug = slugify(req.body.name, { lower: true, strict: true });
+    
+    const brandData = {
+      ...req.body,
+       slug,
+      logo: logoUrl,
+      banner: bannerUrl
+    };
+    
+    const brand = await brandService.createBrand(brandData);
+    res.status(201).json(brand);
   } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({
-        success: false,
-        message: 'Brand with this name already exists'
-      });
-    }
-    
-    res.status(500).json({
-      success: false,
-      message: 'Server error',
-      error: error.message
-    });
+    res.status(400).json({ error: error.message });
   }
 };
 
-// Get all brands with filtering and pagination
-exports.getBrands = async (req, res) => {
+const getBrand = async (req, res) => {
   try {
-    const { 
-      page = 1, 
-      limit = 50, 
-      search, 
-      status 
-    } = req.query;
-    
-    let query = {};
-    
-    if (status) {
-      query.status = status;
-    }
-    
-    if (search) {
-      query.name = { $regex: search, $options: 'i' };
-    }
-    
-    const brands = await Brand.find(query)
-      .sort({ name: 1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .populate('productCount')
-      .populate('orderCount');
-    
-    const total = await Brand.countDocuments(query);
-    
-    res.json({
-      success: true,
-      data: {
-        brands,
-        pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
-          total,
-          pages: Math.ceil(total / limit)
-        }
-      }
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server error',
-      error: error.message
-    });
-  }
-};
-
-// Get single brand
-exports.getBrand = async (req, res) => {
-  try {
-    const brand = await Brand.findById(req.params.id)
-      .populate('productCount')
-      .populate('orderCount');
+    const { id } = req.params;
+    const brand = await brandService.getBrandById(id);
     
     if (!brand) {
-      return res.status(404).json({
-        success: false,
-        message: 'Brand not found'
-      });
+      return res.status(404).json({ error: 'Brand not found' });
     }
     
-    res.json({
-      success: true,
-      data: { brand }
-    });
+    res.json(brand);
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server error',
-      error: error.message
-    });
+    res.status(400).json({ error: error.message });
   }
 };
 
-// Update brand
-exports.updateBrand = async (req, res) => {
+const getBrandBySlug = async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: errors.array()
-      });
-    }
-
-    const { name, description, logo, status, metaTitle, metaDescription } = req.body;
+    const { slug } = req.params;
+    const brand = await brandService.getBrandBySlug(slug);
     
-    const brand = await Brand.findByIdAndUpdate(
-      req.params.id,
-      { name, description, logo, status, metaTitle, metaDescription },
-      { new: true, runValidators: true }
+    if (!brand) {
+      return res.status(404).json({ error: 'Brand not found' });
+    }
+    
+    res.json(brand);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+const getAllBrands = async (req, res) => {
+  try {
+    const filters = req.query;
+    const brands = await brandService.getAllBrands(filters);
+    res.json(brands);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+const updateBrand = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { error } = validateBrand(req.body, true);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
+    
+    let updateData = { ...req.body };
+    
+    if (req.files?.logo) {
+      const logoUrl = await uploadToCloudinary(req.files.logo[0], 'brands/logo');
+      updateData.logo = logoUrl;
+    }
+    
+    if (req.files?.banner) {
+      const bannerUrl = await uploadToCloudinary(req.files.banner[0], 'brands/banner');
+      updateData.banner = bannerUrl;
+    }
+    
+    const brand = await brandService.updateBrand(id, updateData);
+    
+    if (!brand) {
+      return res.status(404).json({ error: 'Brand not found' });
+    }
+    
+    res.json(brand);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+const deleteBrand = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const brand = await brandService.deleteBrand(id);
+    
+    if (!brand) {
+      return res.status(404).json({ error: 'Brand not found' });
+    }
+    
+    res.json({ message: 'Brand deleted successfully' });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+const getBrandProducts = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+    
+    const result = await brandService.getBrandProducts(
+      id, 
+      parseInt(page), 
+      parseInt(limit)
     );
     
-    if (!brand) {
-      return res.status(404).json({
-        success: false,
-        message: 'Brand not found'
-      });
-    }
-    
-    res.json({
-      success: true,
-      message: 'Brand updated successfully',
-      data: { brand }
-    });
+    res.json(result);
   } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({
-        success: false,
-        message: 'Brand with this name already exists'
-      });
-    }
-    
-    res.status(500).json({
-      success: false,
-      message: 'Server error',
-      error: error.message
-    });
+    res.status(400).json({ error: error.message });
   }
 };
 
-// Delete brand
-exports.deleteBrand = async (req, res) => {
-  try {
-    const brand = await Brand.findById(req.params.id);
-    
-    if (!brand) {
-      return res.status(404).json({
-        success: false,
-        message: 'Brand not found'
-      });
-    }
-    
-    // Check if brand has products
-    const productCount = await Product.countDocuments({ brand: req.params.id });
-    if (productCount > 0) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Cannot delete brand with products. Please reassign or delete products first.' 
-      });
-    }
-    
-    await Brand.findByIdAndDelete(req.params.id);
-    
-    res.json({
-      success: true,
-      message: 'Brand deleted successfully'
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server error',
-      error: error.message
-    });
-  }
-};
-
-// Toggle brand status
-exports.toggleBrandStatus = async (req, res) => {
-  try {
-    const brand = await Brand.findById(req.params.id);
-    
-    if (!brand) {
-      return res.status(404).json({
-        success: false,
-        message: 'Brand not found'
-      });
-    }
-    
-    brand.status = brand.status === 'active' ? 'inactive' : 'active';
-    await brand.save();
-    
-    res.json({
-      success: true,
-      message: `Brand ${brand.status === 'active' ? 'activated' : 'deactivated'} successfully`,
-      data: { brand }
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server error',
-      error: error.message
-    });
-  }
+module.exports = {
+  createBrand,
+  getBrand,
+  getBrandBySlug,
+  getAllBrands,
+  updateBrand,
+  deleteBrand,
+  getBrandProducts
 };

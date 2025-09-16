@@ -37,7 +37,8 @@ const auth = async (req, res, next) => {
 
 const requireRole = (roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role.name)) {
+    console.log(req.user.role,"user role");
+    if (!roles.includes(req.user.role)) {
       return res.status(403).json({ 
         success: false,
         message: 'Access denied. Insufficient permissions.' 
@@ -50,8 +51,8 @@ const requireRole = (roles) => {
 const requirePermission = (permission) => {
   return (req, res, next) => {
     const userPermissions = [...req.user.permissions, ...req.user.role.permissions];
-    
-    if (!userPermissions.includes(permission) && req.user.role.name !== 'admin') {
+    console.log(userPermissions,"permissions")
+    if (!userPermissions.includes(permission) && req.user.role !== 'admin') {
       return res.status(403).json({ 
         success: false,
         message: 'Access denied. Insufficient permissions.' 

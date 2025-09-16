@@ -1,75 +1,26 @@
-const { body } = require('express-validator');
+const Joi = require('joi');
 
-const createAttributeValidation = [
-  body('name')
-    .trim()
-    .notEmpty()
-    .withMessage('Attribute name is required')
-    .isLength({ min: 2, max: 100 })
-    .withMessage('Attribute name must be between 2 and 100 characters'),
-  
-  body('values')
-    .optional()
-    .isArray()
-    .withMessage('Values must be an array'),
-  
-  body('values.*.value')
-    .trim()
-    .notEmpty()
-    .withMessage('Attribute value is required'),
-  
-  body('isFilterable')
-    .optional()
-    .isBoolean()
-    .withMessage('isFilterable must be a boolean'),
-  
-  body('isRequired')
-    .optional()
-    .isBoolean()
-    .withMessage('isRequired must be a boolean'),
-  
-  body('status')
-    .optional()
-    .isIn(['active', 'inactive'])
-    .withMessage('Status must be either active or inactive')
-];
+const attributeValueSchema = Joi.object({
+  value: Joi.string().trim().required(),
+  color: Joi.string().trim().allow(null, ''),
+  image: Joi.string().trim().allow(null, ''),
+  isDefault: Joi.boolean().default(false)
+});
 
-const updateAttributeValidation = [
-  body('name')
-    .optional()
-    .trim()
-    .notEmpty()
-    .withMessage('Attribute name cannot be empty')
-    .isLength({ min: 2, max: 100 })
-    .withMessage('Attribute name must be between 2 and 100 characters'),
-  
-  body('values')
-    .optional()
-    .isArray()
-    .withMessage('Values must be an array'),
-  
-  body('values.*.value')
-    .trim()
-    .notEmpty()
-    .withMessage('Attribute value is required'),
-  
-  body('isFilterable')
-    .optional()
-    .isBoolean()
-    .withMessage('isFilterable must be a boolean'),
-  
-  body('isRequired')
-    .optional()
-    .isBoolean()
-    .withMessage('isRequired must be a boolean'),
-  
-  body('status')
-    .optional()
-    .isIn(['active', 'inactive'])
-    .withMessage('Status must be either active or inactive')
-];
+const validateAttribute = (data, isUpdate = false) => {
+  const schema = Joi.object({
+    name: isUpdate ? 
+      Joi.string().trim().max(100) : 
+      Joi.string().trim().max(100).required(),
+    values: Joi.array().items(attributeValueSchema),
+    isFilterable: Joi.boolean().default(false),
+    isRequired: Joi.boolean().default(false),
+    displayType: Joi.string().valid('text', 'color', 'image').default('text'),
+    status: Joi.string().valid('active', 'inactive').default('active'),
+    categories: Joi.array().items(Joi.string())
+  });
 
-module.exports = {
-  createAttributeValidation,
-  updateAttributeValidation
+  return schema.validate(data);
 };
+
+module.exports = { validateAttribute };

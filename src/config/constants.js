@@ -60,5 +60,27 @@ module.exports = {
     delivery: [
       'order.read', 'order.update'
     ]
+  },
+
+  // for category hierarchy
+    CATEGORY_LEVELS: {
+    ROOT: 0,
+    SUB: 1,
+    CHILD: 2,
+    GRANDCHILD: 3
+  },
+  STATUS: {
+    ACTIVE: 'active',
+    INACTIVE: 'inactive',
+    DRAFT: 'draft'
+  },
+  PRODUCT_TYPE: {
+    PHYSICAL: 'physical',
+    DIGITAL: 'digital'
+  },
+  TAX_TYPE: {
+    INCLUSIVE: 'inclusive',
+    EXCLUSIVE: 'exclusive'
   }
+
 };
