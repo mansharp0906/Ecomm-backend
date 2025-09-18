@@ -45,7 +45,11 @@ const getCategoryBySlug = async (slug) => {
 // };
 const getAllCategories = async (filters = {}) => {
   try {
-    const { level, parentId, status, featured, page, limit } = filters;
+    const { level, parentId, status, featured } = filters;
+
+    // parse query params safely
+    const page = filters.page ? parseInt(filters.page, 10) : null;
+    const limit = filters.limit ? parseInt(filters.limit, 10) : null;
 
     let query = {};
     if (level !== undefined) query.level = level;
@@ -57,25 +61,22 @@ const getAllCategories = async (filters = {}) => {
       .populate("parentId", "name slug")
       .sort({ createdAt: -1 }); // latest category first
 
-    // Apply pagination only if page & limit provided
-    if (page !== undefined && limit !== undefined) {
-      const skip = (Number(page) - 1) * Number(limit);
-      categoriesQuery = categoriesQuery.skip(skip).limit(Number(limit));
+    // Apply pagination only if both page & limit are valid
+    if (page && limit) {
+      const skip = (page - 1) * limit;
+      categoriesQuery = categoriesQuery.skip(skip).limit(limit);
     }
 
-    // Execute query
     const categories = await categoriesQuery;
-
-    // If paginated, return also total count
     const total = await Category.countDocuments(query);
 
     return {
       success: true,
       message: "Categories fetched successfully",
-      total, // total records (useful for frontend pagination)
+      total,
       count: categories.length,
-      page: page ? Number(page) : null,
-      limit: limit ? Number(limit) : null,
+      page: page || null,
+      limit: limit || null,
       data: categories,
     };
   } catch (error) {
