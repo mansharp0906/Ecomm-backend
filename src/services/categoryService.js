@@ -1,9 +1,26 @@
 const Category = require('../models/Category');
 
 const createCategory = async (categoryData) => {
-  const category = new Category(categoryData);
-  return await category.save();
+  try {
+    const category = new Category(categoryData);
+    const savedCategory = await category.save();
+
+    return {
+      success: true,
+      message: "Category created successfully",
+      status: 201,
+      data: savedCategory,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: "Error creating category",
+      status: 500,
+      error: error.message,
+    };
+  }
 };
+
 
 const getCategoryById = async (id) => {
   return await Category.findById(id).populate('parentId', 'name slug');
@@ -13,18 +30,61 @@ const getCategoryBySlug = async (slug) => {
   return await Category.findOne({ slug }).populate('parentId', 'name slug');
 };
 
+// const getAllCategories = async (filters = {}) => {
+//   const { level, parentId, status, featured } = filters;
+//   let query = {};
+  
+//   if (level !== undefined) query.level = level;
+//   if (parentId !== undefined) query.parentId = parentId;
+//   if (status) query.status = status;
+//   if (featured !== undefined) query.isFeatured = featured;
+  
+//   return await Category.find(query)
+//     .populate('parentId', 'name slug')
+//     .sort({ priority: -1, name: 1 });
+// };
 const getAllCategories = async (filters = {}) => {
-  const { level, parentId, status, featured } = filters;
-  let query = {};
-  
-  if (level !== undefined) query.level = level;
-  if (parentId !== undefined) query.parentId = parentId;
-  if (status) query.status = status;
-  if (featured !== undefined) query.isFeatured = featured;
-  
-  return await Category.find(query)
-    .populate('parentId', 'name slug')
-    .sort({ priority: -1, name: 1 });
+  try {
+    const { level, parentId, status, featured, page, limit } = filters;
+
+    let query = {};
+    if (level !== undefined) query.level = level;
+    if (parentId !== undefined) query.parentId = parentId;
+    if (status) query.status = status;
+    if (featured !== undefined) query.isFeatured = featured;
+
+    let categoriesQuery = Category.find(query)
+      .populate("parentId", "name slug")
+      .sort({ createdAt: -1 }); // latest category first
+
+    // Apply pagination only if page & limit provided
+    if (page !== undefined && limit !== undefined) {
+      const skip = (Number(page) - 1) * Number(limit);
+      categoriesQuery = categoriesQuery.skip(skip).limit(Number(limit));
+    }
+
+    // Execute query
+    const categories = await categoriesQuery;
+
+    // If paginated, return also total count
+    const total = await Category.countDocuments(query);
+
+    return {
+      success: true,
+      message: "Categories fetched successfully",
+      total, // total records (useful for frontend pagination)
+      count: categories.length,
+      page: page ? Number(page) : null,
+      limit: limit ? Number(limit) : null,
+      data: categories,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: "Failed to fetch categories",
+      error: error.message,
+    };
+  }
 };
 
 const getCategoryTree = async (parentId = null) => {
