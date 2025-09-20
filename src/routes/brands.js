@@ -15,6 +15,7 @@ router.post('/', auth,  requireRole(['admin']), upload.fields([
   { name: 'logo', maxCount: 1 },
   { name: 'banner', maxCount: 1 }
 ]), brandController.createBrand);
+
 router.put('/:id', auth,  requireRole(['admin']), upload.fields([
   { name: 'logo', maxCount: 1 },
   { name: 'banner', maxCount: 1 }

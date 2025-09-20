@@ -67,10 +67,9 @@ const { validateProduct } = require('../validations/productValidation');
 // };
 
 
-
 const createProduct = async (req, res) => {
   try {
-    console.log(req.body, "body in products");
+
 
     let thumbnailUrl = null;
     let imageUrls = [];
@@ -90,14 +89,12 @@ const createProduct = async (req, res) => {
         "products/images"
       );
     }
-
     if (req.files?.pdf?.[0]) {
       pdfUrl = await uploadToCloudinary(
         req.files.pdf[0],
         "products/pdf"
       );
     }
-
     // ✅ Generate slug from title
     const slug = slugify(req.body.title, { lower: true, strict: true });
 
@@ -129,11 +126,17 @@ const createProduct = async (req, res) => {
     productData.storeVisibility = parseIfString("storeVisibility");
 
     // ✅ Normalize numeric and array fields
+    // if (req.body.weight) {
+    //   productData.weight = Array.isArray(req.body.weight)
+    //     ? req.body.weight.map(Number)
+    //     : Number(req.body.weight);
+    // }
     if (req.body.weight) {
-      productData.weight = Array.isArray(req.body.weight)
-        ? req.body.weight.map(Number)
-        : Number(req.body.weight);
-    }
+  productData.weight = Number(
+    Array.isArray(req.body.weight) ? req.body.weight[0] : req.body.weight
+  );
+}
+
 
     if (req.body.stock) {
       productData.stock = Array.isArray(req.body.stock)
@@ -146,7 +149,7 @@ const createProduct = async (req, res) => {
         ? req.body.tags
         : [req.body.tags];
     }
-
+   console.log(req.body.sku, "sku in product controller");
     if (req.body.sku) {
       productData.sku = Array.isArray(req.body.sku)
         ? req.body.sku
