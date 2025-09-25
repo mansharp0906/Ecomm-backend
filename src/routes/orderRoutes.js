@@ -5,7 +5,8 @@ const {
   getOrder, 
   cancelOrder,
   getAllOrders,
-  updateOrderStatus
+  updateOrderStatus,
+  createOfflineOrder
 } = require('../controllers/orderController');
 const { auth, requireRole } = require('../middleware/auth');
 const { handleValidationErrors } = require('../middleware/validation');
@@ -18,7 +19,8 @@ router.post('/', auth, createOrderValidation, handleValidationErrors, createOrde
 router.get('/my-orders', auth, getUserOrders);
 router.get('/my-orders/:id', auth, getOrder);
 router.put('/my-orders/:id/cancel', auth, cancelOrder);
-
+// offline order
+router.post('/create-offline', auth, requireRole(['admin', 'manager']), createOfflineOrder);
 // Admin routes
 router.get('/', auth, requireRole(['admin', 'manager']), getAllOrders);
 router.put('/:id/status', auth, requireRole(['admin', 'manager']), updateOrderStatus);

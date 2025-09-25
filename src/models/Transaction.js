@@ -32,14 +32,19 @@ const transactionSchema = new mongoose.Schema({
   },
   paymentGateway: {
     type: String,
-    required: true
+    default: function() {
+      return this.paymentMethod === 'cod' ? 'COD' : '';
+    }
   },
   status: {
     type: String,
     enum: ['pending', 'processing', 'completed', 'failed', 'refunded'],
     default: 'pending'
   },
-  gatewayResponse: mongoose.Schema.Types.Mixed,
+  gatewayResponse: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null
+  },
   refundAmount: {
     type: Number,
     default: 0
@@ -51,7 +56,7 @@ const transactionSchema = new mongoose.Schema({
 
 // Generate transaction ID before saving
 transactionSchema.pre('save', function(next) {
-  if (this.isNew) {
+  if (this.isNew && !this.transactionId) {
     this.transactionId = 'TXN' + Date.now() + Math.random().toString(36).substr(2, 9).toUpperCase();
   }
   next();
