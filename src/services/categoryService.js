@@ -30,26 +30,12 @@ const getCategoryBySlug = async (slug) => {
   return await Category.findOne({ slug }).populate('parentId', 'name slug');
 };
 
-// const getAllCategories = async (filters = {}) => {
-//   const { level, parentId, status, featured } = filters;
-//   let query = {};
-  
-//   if (level !== undefined) query.level = level;
-//   if (parentId !== undefined) query.parentId = parentId;
-//   if (status) query.status = status;
-//   if (featured !== undefined) query.isFeatured = featured;
-  
-//   return await Category.find(query)
-//     .populate('parentId', 'name slug')
-//     .sort({ priority: -1, name: 1 });
-// };
 const getAllCategories = async (filters = {}) => {
   try {
     const { level, parentId, status, featured } = filters;
-
-    // parse query params safely
-    const page = filters.page ? parseInt(filters.page, 10) : null;
-    const limit = filters.limit ? parseInt(filters.limit, 10) : null;
+    console.log(level, parentId, status, featured ,"quearyparams");
+  const page = filters.page !== undefined ? parseInt(filters.page, 10) : null;
+  const limit = filters.limit !== undefined ? parseInt(filters.limit, 10) : null;
 
     let query = {};
     if (level !== undefined) query.level = level;
@@ -59,10 +45,10 @@ const getAllCategories = async (filters = {}) => {
 
     let categoriesQuery = Category.find(query)
       .populate("parentId", "name slug")
-      .sort({ createdAt: -1 }); // latest category first
+      .sort({ createdAt: -1 });
 
-    // Apply pagination only if both page & limit are valid
-    if (page && limit) {
+    // Fix: Apply pagination if page and limit are not null
+    if (page !== null && limit !== null) {
       const skip = (page - 1) * limit;
       categoriesQuery = categoriesQuery.skip(skip).limit(limit);
     }
