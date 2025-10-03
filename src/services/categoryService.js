@@ -45,7 +45,7 @@ const getCategoryBySlug = async (slug) => {
 // };
 const getAllCategories = async (filters = {}) => {
   try {
-    const { level, parentId, status, featured } = filters;
+    const { level, parentId, status, featured, search } = filters;
 
     // parse query params safely
     const page = filters.page ? parseInt(filters.page, 10) : null;
@@ -56,6 +56,15 @@ const getAllCategories = async (filters = {}) => {
     if (parentId !== undefined) query.parentId = parentId;
     if (status) query.status = status;
     if (featured !== undefined) query.isFeatured = featured;
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { metaTitle: { $regex: search, $options: 'i' } },
+        { metaDescription: { $regex: search, $options: 'i' } },
+        { status: search } // Exact match for status field
+      ];
+    }
 
     let categoriesQuery = Category.find(query)
       .populate("parentId", "name slug")
