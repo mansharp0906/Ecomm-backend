@@ -1,80 +1,57 @@
+// quick-test-offline-order.js
 const axios = require('axios');
 
 const BASE_URL = 'http://localhost:5000/api/v1';
-const AUTH_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4Y2E5MGVlYTM3NGU3YjM2YTQzNjI4YiIsImlhdCI6MTc1ODM0OTUxNiwiZXhwIjoxNzU4OTU0MzE2fQ.6-XQs64tds6t-80n_5LQjZo_Ge8cm_pWSUS5L2iuBs8';
-const PRODUCT_ID = '68c94d3cdf14d6c3738b8958';
-const VARIANT_ID = '68ce49129bda0be1e1b1e3b4';
+const TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4ZDNkNTJkM2ZkMGZmNTVlNmJmMjY2OCIsImlhdCI6MTc1ODcxMzEzMywiZXhwIjoxNzU5MzE3OTMzfQ.kIjaZkuPUfJUjGuvaLEutD2tGYAkUoqNmxMT6RNvxnI';
 
-const api = axios.create({
-  baseURL: BASE_URL,
-  headers: {
-    'Authorization': `Bearer ${AUTH_TOKEN}`,
-    'Content-Type': 'application/json'
-  }
-});
+const testData = [{
+    title: "Test Product for Offline Orders",
+    description: "Test product for offline order testing",
+    shortDescription: "Test product",
+    sku: "TEST-OFFLINE-001",
+    brand: "68d38d11469f0c387179884d", // Use existing brand ID
+    category: "68d1101aa2d7787c701ced98", // Use existing category ID
+    type: "physical",
+    status: "active",
+    variants: [
+        {
+            color: "Black",
+            size: "M",
+            price: 1999,
+            mrp: 2499,
+            stock: 100,
+            sku: "TEST-BLK-M"
+        },
+        {
+            color: "Blue",
+            size: "L",
+            price: 2099,
+            mrp: 2599,
+            stock: 50,
+            sku: "TEST-BLU-L"
+        }
+    ],
+    tax: 18,
+    shippingCost: 50,
+    weight: 0.3
+}];
 
-const testOrderData = {
-  shippingAddress: {
-    firstName: 'Admin',
-    lastName: 'User',
-    email: 'admin@example.com',
-    phone: '+1234567890',
-    address: '456 Admin Street',
-    city: 'San Francisco',
-    state: 'CA',
-    country: 'USA',
-    zipCode: '94102'
-  },
-  paymentMethod: 'cod',
-  shipping: 100,
-  tax: 1440,
-  discount: 0
-};
-
-async function testCompleteFlow() {
-  console.log('🚀 Testing Complete Order Flow with _id\n');
-  
+async function quickTest() {
   try {
-    // 1. Clear cart
-    await api.delete('/cart');
-    console.log('✅ Cart cleared');
-
-    // 2. Add item to cart
-    await api.post('/cart', {
-      productId: PRODUCT_ID,
-      variantId: VARIANT_ID,
-      quantity: 1
+    const response = await axios.post(`${BASE_URL}/orders/create-offline`, testData, {
+      headers: {
+        'Authorization': `Bearer ${TOKEN}`,
+        'Content-Type': 'application/json'
+      }
     });
-    console.log('✅ Item added to cart');
-
-    // 3. Create order
-    const createResponse = await api.post('/orders', testOrderData);
-    const order = createResponse.data.data?.order || createResponse.data.order;
-    console.log('🎉 Order created! ID:', order._id);
-
-    // 4. Get specific order by _id
-    const getResponse = await api.get(`/orders/my-orders/${order._id}`);
-    console.log('✅ Order retrieved by _id:', getResponse.data.data?.order?._id);
-
-    // 5. Get all user orders
-    const allOrdersResponse = await api.get('/orders/my-orders');
-    const orders = allOrdersResponse.data.data?.orders || allOrdersResponse.data.orders || [];
-    console.log('📋 User orders:', orders.length);
-
-    // 6. Test admin endpoints (if user is admin)
-    try {
-      const adminOrdersResponse = await api.get('/orders');
-      const adminOrders = adminOrdersResponse.data.data?.orders || adminOrdersResponse.data.orders || [];
-      console.log('👨‍💼 Admin orders:', adminOrders.length);
-    } catch (adminError) {
-      console.log('⚠️ Admin endpoint access:', adminError.response?.status === 403 ? 'Forbidden (normal for non-admin)' : adminError.message);
-    }
-
-    console.log('\n✅ All tests passed! Using MongoDB _id correctly.');
-
+    
+    console.log('✅ Success! Order created:');
+    console.log(`Order ID: ${response.data.order.orderId}`);
+    console.log(`Total: ₹${response.data.order.grandTotal}`);
+    
   } catch (error) {
-    console.log('❌ Error:', error.response?.data?.message || error.message);
+    console.log('❌ Error:', error.response?.data || error.message);
   }
 }
 
-testCompleteFlow();
+quickTest();
