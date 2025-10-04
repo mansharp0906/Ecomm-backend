@@ -11,7 +11,7 @@ const getProductById = async (id) => {
     .populate('category', 'name slug')
     .populate('subCategory', 'name slug')
     .populate('attributes.attribute', 'name slug displayType')
-    .populate('variants.attributes.attribute', 'name slug displayType');
+    .populate('variants.attributes.attribute', 'name slug displayType'); // Corrected for variant attributes
 };
 
 const getProductBySlug = async (slug) => {
@@ -20,7 +20,7 @@ const getProductBySlug = async (slug) => {
     .populate('category', 'name slug')
     .populate('subCategory', 'name slug')
     .populate('attributes.attribute', 'name slug displayType')
-    .populate('variants.attributes.attribute', 'name slug displayType');
+    .populate('variants.attributes.attribute', 'name slug displayType'); // Corrected
 };
 
 const getAllProducts = async (filters = {}, page = 1, limit = 10, sort = {}) => {
@@ -39,12 +39,12 @@ const getAllProducts = async (filters = {}, page = 1, limit = 10, sort = {}) => 
     if (filters.maxPrice) query['variants.price'].$lte = filters.maxPrice;
   }
   
-  // Text search
+  // Text search (ensure you created a text index on title/description)
   if (filters.search) {
     query.$text = { $search: filters.search };
   }
   
-  // Default sort if not provided
+  // Default sort
   if (Object.keys(sort).length === 0) {
     sort = { createdAt: -1 };
   }
@@ -52,6 +52,9 @@ const getAllProducts = async (filters = {}, page = 1, limit = 10, sort = {}) => 
   const products = await Product.find(query)
     .populate('brand', 'name slug logo')
     .populate('category', 'name slug')
+    .populate('subCategory', 'name slug')
+    .populate('attributes.attribute', 'name slug displayType')
+    .populate('variants.attributes.attribute', 'name slug displayType')
     .skip(skip)
     .limit(limit)
     .sort(sort);
@@ -84,6 +87,9 @@ const getFeaturedProducts = async (limit = 10) => {
   })
     .populate('brand', 'name slug logo')
     .populate('category', 'name slug')
+    .populate('subCategory', 'name slug')
+    .populate('attributes.attribute', 'name slug displayType')
+    .populate('variants.attributes.attribute', 'name slug displayType')
     .limit(limit)
     .sort({ createdAt: -1 });
 };
@@ -95,6 +101,10 @@ const getRelatedProducts = async (productId, categoryId, limit = 5) => {
     _id: { $ne: productId }
   })
     .populate('brand', 'name slug logo')
+    .populate('category', 'name slug')
+    .populate('subCategory', 'name slug')
+    .populate('attributes.attribute', 'name slug displayType')
+    .populate('variants.attributes.attribute', 'name slug displayType')
     .limit(limit)
     .sort({ createdAt: -1 });
 };

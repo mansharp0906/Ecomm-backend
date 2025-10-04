@@ -53,5 +53,4 @@ async function quickTest() {
     console.log('❌ Error:', error.response?.data || error.message);
   }
 }
-
 quickTest();
