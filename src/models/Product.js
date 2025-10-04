@@ -140,6 +140,40 @@ const productSchema = new mongoose.Schema({
     width: Number,
     height: Number
   },
+
+  vendor: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  shop: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Shop',
+    required: true
+  },
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
+  },
+  approvedAt: Date,
+  approvedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  rejectionReason: String,
+  isListed: {
+    type: Boolean,
+    default: false
+  },
+  commissionRate: {
+    type: Number,
+    default: 10
+  },
+  vendorPrice: {
+    type: Number,
+    required: true
+  },
   // Store-specific visibility and stock
   storeVisibility: [{
     store: {
@@ -229,6 +263,13 @@ productSchema.virtual('discountPercentage').get(function() {
 // Include virtuals in JSON output
 productSchema.set('toJSON', { virtuals: true });
 
+
+productSchema.pre('save', function(next) {
+  if (this.isModified('approvalStatus')) {
+    this.isListed = this.approvalStatus === 'approved' && this.status === 'active';
+  }
+  next();
+});
 // Indexes for better performance
 productSchema.index({ slug: 1 });
 productSchema.index({ category: 1 });

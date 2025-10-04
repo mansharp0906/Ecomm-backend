@@ -12,11 +12,7 @@ router.get('/slug/:slug', productController.getProductBySlug);
 router.get('/:id/related', productController.getRelatedProducts);
 
 // Admin routes
-router.post('/', auth, requireRole(['admin']), upload.fields([
-  { name: 'thumbnail', maxCount: 1 },
-  { name: 'images', maxCount: 10 },
-  { name: 'pdf', maxCount: 1 }
-]), productController.createProduct);
+router.post('/', auth, requireRole(['admin','vendor']), productController.createProduct);
 router.put('/:id', auth, requireRole(['admin']), upload.fields([
   { name: 'thumbnail', maxCount: 1 },
   { name: 'images', maxCount: 10 },

@@ -11,16 +11,16 @@ const createBrand = async (req, res) => {
       return res.status(400).json({ error: error.details[0].message });
     }
     
-    let logoUrl = null;
-    let bannerUrl = null;
+    let logoUrl = req.body.logo || null;
+    let bannerUrl = req.body.banner || null;
     
-    if (req.files?.logo) {
-      logoUrl = await uploadToCloudinary(req.files.logo[0], 'brands/logo');
-    }
+    // if (req.files?.logo) {
+    //   logoUrl = await uploadToCloudinary(req.files.logo[0], 'brands/logo');
+    // }
     
-    if (req.files?.banner) {
-      bannerUrl = await uploadToCloudinary(req.files.banner[0], 'brands/banner');
-    }
+    // if (req.files?.banner) {
+    //   bannerUrl = await uploadToCloudinary(req.files.banner[0], 'brands/banner');
+    // }
      
     const slug = slugify(req.body.name, { lower: true, strict: true });
     
@@ -88,15 +88,15 @@ const updateBrand = async (req, res) => {
     
     let updateData = { ...req.body };
     
-    if (req.files?.logo) {
-      const logoUrl = await uploadToCloudinary(req.files.logo[0], 'brands/logo');
-      updateData.logo = logoUrl;
-    }
+    // if (req.files?.logo) {
+    //   const logoUrl = await uploadToCloudinary(req.files.logo[0], 'brands/logo');
+    //   updateData.logo = logoUrl;
+    // }
     
-    if (req.files?.banner) {
-      const bannerUrl = await uploadToCloudinary(req.files.banner[0], 'brands/banner');
-      updateData.banner = bannerUrl;
-    }
+    // if (req.files?.banner) {
+    //   const bannerUrl = await uploadToCloudinary(req.files.banner[0], 'brands/banner');
+    //   updateData.banner = bannerUrl;
+    // }
     
     const brand = await brandService.updateBrand(id, updateData);
     

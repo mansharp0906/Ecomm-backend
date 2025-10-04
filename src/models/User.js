@@ -60,7 +60,29 @@ const userSchema = new mongoose.Schema({
   emailVerified: {
     type: Boolean,
     default: false
-  }
+  },
+  vendorProfile: {
+    businessName: String,
+    taxNumber: String,
+    bankDetails: {
+      accountName: String,
+      accountNumber: String,
+      bankName: String,
+      ifscCode: String
+    },
+    isVerified: {
+      type: Boolean,
+      default: false
+    },
+    verificationDocuments: [{
+      type: String, // URLs to uploaded documents
+      docType: String // 'aadhar', 'pan', 'gst', etc.
+    }]
+  },
+  shops: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Shop'
+  }],
 }, {
   timestamps: true
 });

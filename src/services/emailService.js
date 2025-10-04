@@ -242,9 +242,198 @@ const emailTemplates = {
       </body>
       </html>
     `
+  }),
+
+  shopApproved: (shop, user) => ({
+    subject: `Shop Approved - ${shop.name}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #059669; color: white; padding: 20px; text-align: center; }
+          .content { background: #f9f9f9; padding: 20px; }
+          .shop-info { background: white; padding: 15px; border-radius: 5px; margin: 15px 0; }
+          .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Shop Approved!</h1>
+          </div>
+          <div class="content">
+            <h2>Congratulations ${user.name}!</h2>
+            <p>Your shop <strong>${shop.name}</strong> has been approved and is now live on our platform.</p>
+            
+            <div class="shop-info">
+              <h3>Shop Details</h3>
+              <p><strong>Shop Name:</strong> ${shop.name}</p>
+              <p><strong>Approval Date:</strong> ${new Date(shop.approvedAt).toLocaleDateString()}</p>
+              <p><strong>Shop URL:</strong> ${process.env.FRONTEND_URL}/shops/${shop.slug}</p>
+            </div>
+
+            <p>You can now start adding products to your shop. Products will be reviewed based on your shop's approval settings.</p>
+            <p>Thank you for being part of our marketplace!</p>
+          </div>
+          <div class="footer">
+            <p>If you have any questions, contact us at support@yourmarketplace.com</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  }),
+
+  shopRejected: (shop, user, reason) => ({
+    subject: `Shop Application Update - ${shop.name}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #DC2626; color: white; padding: 20px; text-align: center; }
+          .content { background: #f9f9f9; padding: 20px; }
+          .rejection-info { background: white; padding: 15px; border-radius: 5px; margin: 15px 0; }
+          .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Shop Application Update</h1>
+          </div>
+          <div class="content">
+            <h2>Hello ${user.name},</h2>
+            <p>We've reviewed your shop application for <strong>${shop.name}</strong>.</p>
+            
+            <div class="rejection-info">
+              <h3>Application Status: Not Approved</h3>
+              <p><strong>Reason:</strong> ${reason}</p>
+              <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+            </div>
+
+            <p>You can update your shop information and reapply. Please address the issues mentioned above.</p>
+            <p>If you have any questions, please contact our support team.</p>
+          </div>
+          <div class="footer">
+            <p>If you need assistance, contact us at support@yourmarketplace.com</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  }),
+
+  productApproved: (product) => ({
+    subject: `Product Approved - ${product.title}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #059669; color: white; padding: 20px; text-align: center; }
+          .content { background: #f9f9f9; padding: 20px; }
+          .product-info { background: white; padding: 15px; border-radius: 5px; margin: 15px 0; }
+          .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Product Approved!</h1>
+          </div>
+          <div class="content">
+            <h2>Great News!</h2>
+            <p>Your product <strong>${product.title}</strong> has been approved and is now live in your shop.</p>
+            
+            <div class="product-info">
+              <h3>Product Details</h3>
+              <p><strong>Product Name:</strong> ${product.title}</p>
+              <p><strong>Approval Date:</strong> ${new Date(product.approvedAt).toLocaleDateString()}</p>
+              <p><strong>Product URL:</strong> ${process.env.FRONTEND_URL}/products/${product.slug}</p>
+            </div>
+
+            <p>Customers can now view and purchase your product.</p>
+            <p>Thank you for contributing to our marketplace!</p>
+          </div>
+          <div class="footer">
+            <p>If you have any questions, contact us at support@yourmarketplace.com</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  }),
+
+  productRejected: (product, reason) => ({
+    subject: `Product Not Approved - ${product.title}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #DC2626; color: white; padding: 20px; text-align: center; }
+          .content { background: #f9f9f9; padding: 20px; }
+          .rejection-info { background: white; padding: 15px; border-radius: 5px; margin: 15px 0; }
+          .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Product Review Update</h1>
+          </div>
+          <div class="content">
+            <h2>Hello ${product.vendor.name},</h2>
+            <p>We've reviewed your product <strong>${product.title}</strong>.</p>
+            
+            <div class="rejection-info">
+              <h3>Product Status: Not Approved</h3>
+              <p><strong>Reason:</strong> ${reason}</p>
+              <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+            </div>
+
+            <p>You can update your product information and resubmit for approval. Please address the issues mentioned above.</p>
+            <p>If you have any questions, please contact our support team.</p>
+          </div>
+          <div class="footer">
+            <p>If you need assistance, contact us at support@yourmarketplace.com</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
   })
+
+};
+const sendShopApprovedEmail = async (shop, user) => {
+  const template = emailTemplates.shopApproved(shop, user);
+  return await sendEmail(user.email, template.subject, template.html);
 };
 
+const sendShopRejectedEmail = async (shop, user, reason) => {
+  const template = emailTemplates.shopRejected(shop, user, reason);
+  return await sendEmail(user.email, template.subject, template.html);
+};
+
+const sendProductApprovalEmail = async (product) => {
+  const template = emailTemplates.productApproved(product);
+  return await sendEmail(product.vendor.email, template.subject, template.html);
+};
+
+const sendProductRejectionEmail = async (product, reason) => {
+  const template = emailTemplates.productRejected(product, reason);
+  return await sendEmail(product.vendor.email, template.subject, template.html);
+};
 // Main email sending function
 const sendEmail = async (to, subject, html) => {
   try {
@@ -299,5 +488,9 @@ module.exports = {
   sendOrderDelivered,
   sendPaymentSuccess,
   sendOrderCancelled,
+  sendShopApprovedEmail,
+  sendShopRejectedEmail,
+  sendProductApprovalEmail,
+  sendProductRejectionEmail,
   emailTemplates
 };

@@ -7,6 +7,18 @@ module.exports = {
     VENDOR: 'vendor',
     DELIVERY: 'delivery'
   },
+  SHOP_STATUS: {
+    PENDING: 'pending',
+    APPROVED: 'approved',
+    REJECTED: 'rejected',
+    SUSPENDED: 'suspended'
+  },
+  
+  PRODUCT_APPROVAL_STATUS: {
+    PENDING: 'pending',
+    APPROVED: 'approved',
+    REJECTED: 'rejected'
+  },
   PERMISSIONS: {
     // User permissions
     USER_CREATE: 'user.create',

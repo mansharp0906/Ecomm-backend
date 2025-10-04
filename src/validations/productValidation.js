@@ -5,12 +5,14 @@ const variantSchema = Joi.object({
   price: Joi.number().min(0).required(),
   mrp: Joi.number().min(0).required(),
   weight: Joi.number().min(0).default(0),
-  stock: Joi.number().default(0),
-  images: Joi.array().items(Joi.string()),
-  attributes: Joi.array().items(Joi.object({
-    attribute: Joi.string().required(),
-    value: Joi.string().required()
-  })),
+  stock: Joi.number().min(0).default(0),
+  images: Joi.array().items(Joi.string()).default([]),
+  attributes: Joi.array().items(
+    Joi.object({
+      attribute: Joi.string().required(),
+      value: Joi.string().required()
+    })
+  ).default([]),
   status: Joi.string().valid('active', 'inactive').default('active')
 });
 
@@ -21,73 +23,61 @@ const productAttributeSchema = Joi.object({
 
 const storeVisibilitySchema = Joi.object({
   store: Joi.string().required(),
-  // stock: Joi.number().default(0),
-  stock: Joi.alternatives().try(
-  Joi.number(),
-  Joi.array().items(Joi.number())
-).default(0),
-
+  stock: Joi.alternatives().try(Joi.number(), Joi.array().items(Joi.number())).default(0),
   threshold: Joi.number().default(5),
   visible: Joi.boolean().default(true)
 });
 
 const dimensionsSchema = Joi.object({
-  length: Joi.number().min(0),
-  width: Joi.number().min(0),
-  height: Joi.number().min(0)
+  length: Joi.number().min(0).default(0),
+  width: Joi.number().min(0).default(0),
+  height: Joi.number().min(0).default(0)
 });
 
 const validateProduct = (data, isUpdate = false) => {
   const schema = Joi.object({
-    title: isUpdate ? 
-      Joi.string().trim().max(200) : 
-      Joi.string().trim().max(200).required(),
+    title: isUpdate
+      ? Joi.string().trim().max(200)
+      : Joi.string().trim().max(200).required(),
     description: Joi.string().trim().allow(''),
     shortDescription: Joi.string().trim().max(300).allow(''),
     sku: Joi.string().allow(''),
     barcode: Joi.string().allow(''),
     brand: Joi.string().allow(null),
-    category: isUpdate ? 
-      Joi.string() : 
-      Joi.string().required(),
+    category: isUpdate ? Joi.string() : Joi.string().required(),
     subCategory: Joi.string().allow(null),
-    variants: Joi.array().items(variantSchema),
-    attributes: Joi.array().items(productAttributeSchema),
-    images: Joi.array().items(Joi.string()),
-    thumbnail: isUpdate ? 
-      Joi.string() : 
-      Joi.string().required(),
+    
+    // ✅ Fix: Add these required fields
+    vendor: isUpdate ? Joi.string() : Joi.string().required(),
+    shop: isUpdate ? Joi.string() : Joi.string().required(),
+    thumbnail: isUpdate ? Joi.string().allow('') : Joi.string().required(),
+    
+    // ✅ Fix: Handle both price and vendorPrice
+    price: Joi.number().min(0), // From request
+    vendorPrice: Joi.number().min(0), // From controller logic
+    
+    variants: Joi.array().items(variantSchema).default([]),
+    attributes: Joi.array().items(productAttributeSchema).default([]),
+    images: Joi.array().items(Joi.string()).default([]),
     type: Joi.string().valid('physical', 'digital').default('physical'),
     unit: Joi.string().default('pcs'),
     minOrderQty: Joi.number().min(1).default(1),
     tax: Joi.number().min(0).default(0),
     taxType: Joi.string().valid('inclusive', 'exclusive').default('exclusive'),
     shippingCost: Joi.number().min(0).default(0),
-    // weight: Joi.number().min(0).default(0),
-    weight: Joi.alternatives().try(
-  Joi.number(),
-  Joi.array().items(Joi.number())
-).default(0),
-
-
-tags: Joi.alternatives().try(
-  Joi.string(),
-  Joi.array().items(Joi.string())
-),
-
-    dimensions: dimensionsSchema,
-    storeVisibility: Joi.array().items(storeVisibilitySchema),
+    weight: Joi.alternatives().try(Joi.number(), Joi.array().items(Joi.number())).default(0),
+    tags: Joi.alternatives().try(Joi.string(), Joi.array().items(Joi.string())).default([]),
+    dimensions: dimensionsSchema.default({ length: 0, width: 0, height: 0 }),
+    storeVisibility: Joi.array().items(storeVisibilitySchema).default([]),
     status: Joi.string().valid('active', 'inactive', 'draft').default('draft'),
     featured: Joi.boolean().default(false),
     metaTitle: Joi.string().trim().allow(''),
     metaDescription: Joi.string().trim().allow(''),
     pdf: Joi.string().allow(null, ''),
-    // tags: Joi.array().items(Joi.string()),
-    createdBy: Joi.string()
+    createdBy: Joi.string().allow(null)
   });
 
-  // return schema.validate(data);
-   return schema.validate(data, { stripUnknown: true });
+  return schema.validate(data, { stripUnknown: true });
 };
 
 module.exports = { validateProduct };
