@@ -23,15 +23,10 @@ const userSchema = new mongoose.Schema({
     minlength: 6,
     select: false
   },
-  // role: {
-  //   type: mongoose.Schema.Types.ObjectId,
-  //   ref: 'Role',
-  //   required: true
-  // },
   role: {
-    type: String,
-    enum: Object.values(ROLES),
-    default: ROLES.CUSTOMER
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Role',
+    required: true
   },
   phone: {
     type: String,

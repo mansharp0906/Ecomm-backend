@@ -2,7 +2,7 @@ const { uploadToCloudinary, uploadMultipleToCloudinary } = require('../utils/clo
 
 // Upload single image
 const uploadSingleImage = async (req, res) => {
-  console.log(req.file, "file data in controler");
+  // console.log(req.file, "file data in controler");
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, error: 'No file uploaded' });

@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET, JWT_EXPIRES_IN } = require('../config');
+const Role = require('../models/Role');
 const User = require('../models/User');
 
 const generateToken = (userId) => {

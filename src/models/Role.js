@@ -6,15 +6,15 @@ const roleSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-    trim: true,
-    enum: ['admin', 'manager', 'cashier', 'customer', 'vendor', 'delivery']
+    trim: true
   },
   description: {
     type: String,
     trim: true
   },
   permissions: [{
-    type: String
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Permission'
   }],
   isDefault: {
     type: Boolean,
@@ -33,12 +33,6 @@ const roleSchema = new mongoose.Schema({
 roleSchema.index({ name: 1 });
 roleSchema.index({ status: 1 });
 
-// Set default permissions based on role name
-roleSchema.pre('save', function(next) {
-  if (this.isNew && DEFAULT_ROLE_PERMISSIONS[this.name]) {
-    this.permissions = DEFAULT_ROLE_PERMISSIONS[this.name];
-  }
-  next();
-});
+
 
 module.exports = mongoose.model('Role', roleSchema);
